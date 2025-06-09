@@ -1,0 +1,228 @@
+
+ 
+<html lang="de"><head>
+  <meta charset="UTF-8">
+  <title>100 Umschläge Sparplan</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+ 
+    header {
+      background: #007bff;
+      color: white;
+      padding: 15px 20px;
+      font-size: 22px;
+    }
+ 
+    nav {
+      display: flex;
+      background: #e9ecef;
+    }
+ 
+    nav button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: #e9ecef;
+      cursor: pointer;
+      font-size: 16px;
+    }
+ 
+    nav button.active {
+      background: #ffffff;
+      border-bottom: 3px solid #007bff;
+      font-weight: bold;
+    }
+ 
+    section {
+      padding: 20px;
+      display: none;
+    }
+ 
+    section.active {
+      display: block;
+    }
+ 
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+ 
+    .fach {
+      padding: 8px 12px;
+      margin: 5px 0;
+      background: #d1e7dd;
+      border-left: 5px solid #0f5132;
+      border-radius: 4px;
+    }
+ 
+    .info, .summary {
+      margin-top: 20px;
+      padding: 12px;
+      background: #fff3cd;
+      border-left: 5px solid #856404;
+      border-radius: 4px;
+    }
+ 
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+      border: none;
+    }
+ 
+    .fach-liste {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 10px;
+      padding: 10px;
+    }
+ 
+    .fach-item {
+      border-bottom: 1px solid #eee;
+      padding: 6px 0;
+    }
+ 
+    .summary strong {
+      display: inline-block;
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+ 
+<header>💰 100 Umschläge Sparplan</header>
+ 
+<nav>
+  <button class="active" onclick="wechselTab('sparen')">🎯 Sparen</button>
+  <button onclick="wechselTab('liste')">📋 Gesamtliste</button>
+</nav>
+ 
+<section id="sparen" class="active">
+  <label>Budget für diesen Monat (€):</label><br>
+  <input type="number" id="budget" placeholder="z. B. 100"><br>
+  <button onclick="berechneUmschläge()">Berechnen & bestätigen</button>
+  <button onclick="zuruecksetzen()" class="btn-danger" style="margin-left: 10px;">Zurücksetzen</button>
+ 
+  <div id="result"></div>
+</section>
+ 
+<section id="liste">
+  <h3>📋 Alle gefüllten Umschläge</h3>
+  <div class="fach-liste" id="listeFächer"><div class="fach-item">Fach 45: <strong>45 €</strong></div><div class="fach-item">Fach 91: <strong>91 €</strong></div><div class="fach-item">Fach 92: <strong>92 €</strong></div><div class="fach-item">Fach 93: <strong>93 €</strong></div><div class="fach-item">Fach 94: <strong>94 €</strong></div><div class="fach-item">Fach 95: <strong>95 €</strong></div><div class="fach-item">Fach 96: <strong>96 €</strong></div><div class="fach-item">Fach 97: <strong>97 €</strong></div><div class="fach-item">Fach 98: <strong>98 €</strong></div><div class="fach-item">Fach 99: <strong>99 €</strong></div><div class="fach-item">Fach 100: <strong>100 €</strong></div></div>
+  <div class="summary" id="summary">
+      <strong>📦 Gefüllte Fächer:</strong> 11/100<br>
+      <strong>💰 Gesamt gespart:</strong> 1000 €<br>
+      <strong>🕒 Gespeicherter Restbetrag:</strong> 0.00 €
+    </div>
+</section>
+ 
+<script>
+  let fächer = [];
+  for (let i = 1; i <= 100; i++) {
+    fächer.push({ nummer: i, betrag: i, gefüllt: false });
+  }
+ 
+  // Lade gespeicherte Fächer
+  if (localStorage.getItem("gefülltFächer")) {
+    const gespeicherte = JSON.parse(localStorage.getItem("gefülltFächer"));
+    fächer.forEach(f => {
+      if (gespeicherte.includes(f.nummer)) f.gefüllt = true;
+    });
+  }
+ 
+  let restbetrag = parseFloat(localStorage.getItem("restbetrag")) || 0;
+ 
+  function berechneUmschläge() {
+    const input = parseFloat(document.getElementById("budget").value);
+    if (isNaN(input) || input <= 0) return alert("Bitte gültigen Betrag eingeben!");
+ 
+    let gesamtbudget = input + restbetrag;
+    let verbleibend = gesamtbudget;
+    const offeneFächer = fächer.filter(f => !f.gefüllt).sort((a, b) => b.betrag - a.betrag);
+    const auswahl = [];
+ 
+    for (let fach of offeneFächer) {
+      if (fach.betrag <= verbleibend) {
+        verbleibend -= fach.betrag;
+        auswahl.push(fach);
+      }
+    }
+ 
+    const summe = auswahl.reduce((s, f) => s + f.betrag, 0);
+    const liste = auswahl.map(f => `Fach ${f.nummer} – ${f.betrag} €`).join("\n");
+    const bestätigen = confirm(`Du hast insgesamt ${gesamtbudget.toFixed(2)} € zur Verfügung.\n\nDiese Fächer sollen gefüllt werden:\n\n${liste}\n\nVerwendet: ${summe} €\nRest: ${(verbleibend).toFixed(2)} €\n\nMöchtest du das übernehmen?`);
+    if (!bestätigen) return;
+ 
+    auswahl.forEach(f => f.gefüllt = true);
+    restbetrag = verbleibend;
+ 
+    localStorage.setItem("gefülltFächer", JSON.stringify(fächer.filter(f => f.gefüllt).map(f => f.nummer)));
+    localStorage.setItem("restbetrag", restbetrag.toFixed(2));
+ 
+    zeigeErgebnis(auswahl, summe);
+    zeigeListe();
+  }
+ 
+  function zeigeErgebnis(auswahl, verwendet) {
+    const resultDiv = document.getElementById("result");
+    resultDiv.innerHTML = `<h3>✅ Gefüllte Fächer:</h3>`;
+    auswahl.forEach(fach => {
+      resultDiv.innerHTML += `<div class="fach">Fach ${fach.nummer} – ${fach.betrag} €</div>`;
+    });
+ 
+    const gesamtGespart = fächer.filter(f => f.gefüllt).reduce((sum, f) => sum + f.betrag, 0);
+    const anzahlGefüllt = fächer.filter(f => f.gefüllt).length;
+ 
+    resultDiv.innerHTML += `<div class="info">
+      💸 Diesen Monat gespart: <strong>${verwendet} €</strong><br>
+      🕒 Restbetrag gespeichert: <strong>${restbetrag.toFixed(2)} €</strong><br>
+      📦 Gesamt gespart: <strong>${gesamtGespart} €</strong> (${anzahlGefüllt}/100 Fächer)
+    </div>`;
+  }
+ 
+  function zeigeListe() {
+    const listeDiv = document.getElementById("listeFächer");
+    const summaryDiv = document.getElementById("summary");
+    const gefüllt = fächer.filter(f => f.gefüllt).sort((a, b) => a.nummer - b.nummer);
+ 
+    listeDiv.innerHTML = "";
+    gefüllt.forEach(fach => {
+      listeDiv.innerHTML += `<div class="fach-item">Fach ${fach.nummer}: <strong>${fach.betrag} €</strong></div>`;
+    });
+ 
+    const gesamt = gefüllt.reduce((s, f) => s + f.betrag, 0);
+    summaryDiv.innerHTML = `
+      <strong>📦 Gefüllte Fächer:</strong> ${gefüllt.length}/100<br>
+      <strong>💰 Gesamt gespart:</strong> ${gesamt} €<br>
+      <strong>🕒 Gespeicherter Restbetrag:</strong> ${restbetrag.toFixed(2)} €
+    `;
+  }
+ 
+  function zuruecksetzen() {
+    if (!confirm("Willst du wirklich alles zurücksetzen? Alle Daten werden gelöscht.")) return;
+    localStorage.removeItem("gefülltFächer");
+    localStorage.removeItem("restbetrag");
+    location.reload();
+  }
+ 
+  function wechselTab(tab) {
+    document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+    document.querySelector(`nav button[onclick*="${tab}"]`).classList.add('active');
+    document.getElementById(tab).classList.add('active');
+    if (tab === "liste") zeigeListe();
+  }
+ 
+  // Initial anzeigen
+  zeigeListe();
+</script>
+ 	</body></html>
